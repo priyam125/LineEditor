@@ -40,3 +40,7 @@ code {
   @apply text-sm;
   @apply font-semibold;
 }
+
+.red-text {
+  color: red;
+}
