@@ -5,6 +5,7 @@ import {
   RichUtils,
   convertToRaw,
   convertFromRaw,
+  Modifier,
 } from "draft-js";
 import "draft-js/dist/Draft.css";
 
@@ -56,37 +57,81 @@ const LineEditor = () => {
     const content = editorState.getCurrentContent();
     const selection = editorState.getSelection();
     const currentBlock = content.getBlockForKey(selection.getStartKey());
-    const contentText = currentBlock.getText().trimStart();
-    const startsWithHash = contentText.startsWith("#");
-    const startsWithStar = contentText.startsWith("*");
-    const startsWithTwoStar = contentText.startsWith("**");
-    const startsWithThreeStar = contentText.startsWith("***");
+    const contentText = currentBlock.getText();
+    const trimmedText = contentText.trimStart();
+    const startsWithHash = trimmedText.startsWith("#");
+    const startsWithStar = trimmedText.startsWith("*");
+    const startsWithTwoStar = trimmedText.startsWith("**");
+    const startsWithThreeStar = trimmedText.startsWith("***");
 
-    console.log("e.key", e.key);
-    console.log("startsWithHash", startsWithHash);
-    console.log("contentText.length", contentText.length);
-    console.log("startsWithHash.length + 1", startsWithHash.length + 1);
-
-    if (e.key === " " && startsWithHash && contentText.length === 1) {
-      console.log("entered");
+    if (e.key === " " && startsWithHash && trimmedText.length === 1) {
       e.preventDefault();
-      handleKeyCommand("toggle-heading");
-    } else if (e.key === " " && startsWithStar && contentText.length === 1) {
-      console.log("entered");
+      const updatedContentState = Modifier.replaceText(
+        content,
+        selection.merge({
+          anchorOffset: contentText.length - trimmedText.length,
+          focusOffset: contentText.length,
+        }),
+        ""
+      );
+      const newEditorState = EditorState.push(
+        editorState,
+        updatedContentState,
+        "remove-hash"
+      );
+      onChange(RichUtils.toggleBlockType(newEditorState, "header-one"));
+    } else if (e.key === " " && startsWithStar && trimmedText.length === 1) {
       e.preventDefault();
-      handleKeyCommand("toggle-bold");
-    } else if (e.key === " " && startsWithTwoStar && contentText.length === 2) {
-      console.log("2 entered 2");
+      const updatedContentState = Modifier.replaceText(
+        content,
+        selection.merge({
+          anchorOffset: contentText.length - trimmedText.length,
+          focusOffset: contentText.length,
+        }),
+        ""
+      );
+      const newEditorState = EditorState.push(
+        editorState,
+        updatedContentState,
+        "remove-star"
+      );
+      onChange(RichUtils.toggleInlineStyle(newEditorState, "BOLD"));
+    } else if (e.key === " " && startsWithTwoStar && trimmedText.length === 2) {
       e.preventDefault();
-      handleKeyCommand("toggle-double-star-color");
+      const updatedContentState = Modifier.replaceText(
+        content,
+        selection.merge({
+          anchorOffset: contentText.length - trimmedText.length,
+          focusOffset: contentText.length,
+        }),
+        ""
+      );
+      const newEditorState = EditorState.push(
+        editorState,
+        updatedContentState,
+        "remove-two-stars"
+      );
+      onChange(RichUtils.toggleInlineStyle(newEditorState, "doubleStarColor"));
     } else if (
       e.key === " " &&
       startsWithThreeStar &&
-      contentText.length === 3
+      trimmedText.length === 3
     ) {
-      console.log("entered");
       e.preventDefault();
-      handleKeyCommand("toggle-underline");
+      const updatedContentState = Modifier.replaceText(
+        content,
+        selection.merge({
+          anchorOffset: contentText.length - trimmedText.length,
+          focusOffset: contentText.length,
+        }),
+        ""
+      );
+      const newEditorState = EditorState.push(
+        editorState,
+        updatedContentState,
+        "remove-three-stars"
+      );
+      onChange(RichUtils.toggleInlineStyle(newEditorState, "UNDERLINE"));
     }
   };
 
@@ -99,7 +144,7 @@ const LineEditor = () => {
   }, [editorState]);
 
   return (
-    <div className="w-80 h-80 bg-blue-200">
+    <div className="">
       <h1>Title</h1>
       <button onClick={handleSave}>Save</button>
       <Editor
