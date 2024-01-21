@@ -8,6 +8,7 @@ import {
   Modifier,
 } from "draft-js";
 import "draft-js/dist/Draft.css";
+import { FaInfoCircle } from "react-icons/fa";
 
 const LineEditor = () => {
   const [editorState, setEditorState] = useState(() => {
@@ -16,6 +17,8 @@ const LineEditor = () => {
       ? EditorState.createWithContent(convertFromRaw(JSON.parse(savedContent)))
       : EditorState.createEmpty();
   });
+
+  const [showKeyBindings, setShowKeyBindings] = useState(false);
 
   const onChange = (newEditorState) => {
     setEditorState(newEditorState);
@@ -58,80 +61,43 @@ const LineEditor = () => {
     const selection = editorState.getSelection();
     const currentBlock = content.getBlockForKey(selection.getStartKey());
     const contentText = currentBlock.getText();
-    const trimmedText = contentText.trimStart();
-    const startsWithHash = trimmedText.startsWith("#");
-    const startsWithStar = trimmedText.startsWith("*");
-    const startsWithTwoStar = trimmedText.startsWith("**");
-    const startsWithThreeStar = trimmedText.startsWith("***");
 
-    if (e.key === " " && startsWithHash && trimmedText.length === 1) {
-      e.preventDefault();
-      const updatedContentState = Modifier.replaceText(
-        content,
-        selection.merge({
-          anchorOffset: contentText.length - trimmedText.length,
-          focusOffset: contentText.length,
-        }),
-        ""
-      );
-      const newEditorState = EditorState.push(
-        editorState,
-        updatedContentState,
-        "remove-hash"
-      );
-      onChange(RichUtils.toggleBlockType(newEditorState, "header-one"));
-    } else if (e.key === " " && startsWithStar && trimmedText.length === 1) {
-      e.preventDefault();
-      const updatedContentState = Modifier.replaceText(
-        content,
-        selection.merge({
-          anchorOffset: contentText.length - trimmedText.length,
-          focusOffset: contentText.length,
-        }),
-        ""
-      );
-      const newEditorState = EditorState.push(
-        editorState,
-        updatedContentState,
-        "remove-star"
-      );
-      onChange(RichUtils.toggleInlineStyle(newEditorState, "BOLD"));
-    } else if (e.key === " " && startsWithTwoStar && trimmedText.length === 2) {
-      e.preventDefault();
-      const updatedContentState = Modifier.replaceText(
-        content,
-        selection.merge({
-          anchorOffset: contentText.length - trimmedText.length,
-          focusOffset: contentText.length,
-        }),
-        ""
-      );
-      const newEditorState = EditorState.push(
-        editorState,
-        updatedContentState,
-        "remove-two-stars"
-      );
-      onChange(RichUtils.toggleInlineStyle(newEditorState, "doubleStarColor"));
-    } else if (
-      e.key === " " &&
-      startsWithThreeStar &&
-      trimmedText.length === 3
-    ) {
-      e.preventDefault();
-      const updatedContentState = Modifier.replaceText(
-        content,
-        selection.merge({
-          anchorOffset: contentText.length - trimmedText.length,
-          focusOffset: contentText.length,
-        }),
-        ""
-      );
-      const newEditorState = EditorState.push(
-        editorState,
-        updatedContentState,
-        "remove-three-stars"
-      );
-      onChange(RichUtils.toggleInlineStyle(newEditorState, "UNDERLINE"));
+    if (e.key === " ") {
+      const match = contentText.match(/^(\s*)(#|[*]{1,3})(\s*)/);
+      if (match) {
+        e.preventDefault();
+
+        const [, leadingSpaces, specialChars, trailingSpaces] = match;
+        const startOffset = leadingSpaces.length;
+        const endOffset = contentText.length - trailingSpaces.length;
+
+        const updatedContentState = Modifier.replaceText(
+          content,
+          selection.merge({
+            anchorOffset: startOffset,
+            focusOffset: endOffset,
+          }),
+          ""
+        );
+
+        const newEditorState = EditorState.push(
+          editorState,
+          updatedContentState,
+          "remove-special-chars"
+        );
+
+        if (specialChars === "#") {
+          onChange(RichUtils.toggleBlockType(newEditorState, "header-one"));
+        } else if (specialChars === "*") {
+          onChange(RichUtils.toggleInlineStyle(newEditorState, "BOLD"));
+        } else if (specialChars === "**") {
+          onChange(
+            RichUtils.toggleInlineStyle(newEditorState, "doubleStarColor")
+          );
+        } else if (specialChars === "***") {
+          onChange(RichUtils.toggleInlineStyle(newEditorState, "UNDERLINE"));
+        }
+      }
     }
   };
 
@@ -143,17 +109,47 @@ const LineEditor = () => {
     };
   }, [editorState]);
 
+  const keyBindingsInfo = (
+    <div className="absolute top-12 left-4 bg-white p-4 shadow-md rounded-md">
+      <p>
+        <strong>Key Bindings:</strong>
+      </p>
+      <p># + Space: Heading</p>
+      <p>* + Space: Bold</p>
+      <p>** + Space: Red Line</p>
+      <p>*** + Space: Underline</p>
+    </div>
+  );
+
   return (
-    <div className="">
-      <h1>Title</h1>
-      <button onClick={handleSave}>Save</button>
-      <Editor
-        editorState={editorState}
-        onChange={onChange}
-        handleKeyCommand={handleKeyCommand}
-        customStyleMap={colorStyleMap}
-        placeholder="Type here..."
-      />
+    <div className="relative flex flex-col">
+      <div className="flex justify-between space-x-20 mb-2">
+        <span
+          className="ml-2 cursor-pointer z-10"
+          onMouseEnter={() => setShowKeyBindings(true)}
+          onMouseLeave={() => setShowKeyBindings(false)}
+        >
+          <FaInfoCircle />
+          {showKeyBindings && keyBindingsInfo}
+        </span>
+
+        <h1>Line editor by Priyam</h1>
+        <button
+          onClick={handleSave}
+          className="border-[3px] border-black py-0.5 px-3 border-b-4 border-r-4"
+        >
+          Save
+        </button>
+      </div>
+      <div className="border-2 border-blue-400 p-4">
+        <Editor
+          editorState={editorState}
+          onChange={onChange}
+          handleKeyCommand={handleKeyCommand}
+          customStyleMap={colorStyleMap}
+          placeholder="Type here..."
+        />
+      </div>
     </div>
   );
 };
